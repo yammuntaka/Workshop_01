@@ -62,6 +62,12 @@ namespace Vista.Server.Infrastructure.Http
                 return;
             }
 
+            if (path == "/js/vendor/chart.umd.min.js")
+            {
+                ServeFile(context.Response, Path.Combine("js", "vendor", "chart.umd.min.js"), "application/javascript; charset=utf-8");
+                return;
+            }
+
             if (path == "/data/products.json")
             {
                 ServeFile(context.Response, Path.Combine("data", "products.json"), "application/json; charset=utf-8");

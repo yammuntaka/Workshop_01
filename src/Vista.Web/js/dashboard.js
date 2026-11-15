@@ -4,6 +4,17 @@ import { loadDashboardData } from "./data-service.js";
   const chartColors = ["#7158e8", "#41c8a0", "#ffb84d", "#3b82d4", "#e879a8", "#78909c", "#8c70e8", "#96a1b3"];
   const toast = document.getElementById("toast");
   let toastTimer;
+  const chartFont = '"Leelawadee UI", "Segoe UI", Tahoma, sans-serif';
+
+  function getChartLibrary() {
+    if (typeof window.Chart !== "function") {
+      throw new Error("Chart.js failed to load from the local application files");
+    }
+    window.Chart.defaults.font.family = chartFont;
+    window.Chart.defaults.font.size = 12;
+    window.Chart.defaults.color = "#596579";
+    return window.Chart;
+  }
 
   function showToast(message) {
     toast.textContent = message;
@@ -45,7 +56,9 @@ import { loadDashboardData } from "./data-service.js";
     setChange("metricSdqChange", data.latestSdq, data.initialSdq);
     document.getElementById("metricSsqFoot").textContent = "SSQ Estimation: " + data.formatNumber(data.ssqEstimation);
     document.getElementById("dataSource").textContent = "ที่มา: " + data.sourceFile + " · " + data.formatNumber(data.skuCount) + " SKU";
-    document.getElementById("dataPeriod").textContent = data.period || "ไม่ระบุช่วงข้อมูล";
+    document.getElementById("dataPeriod").textContent = data.period
+      ? "ช่วงข้อมูล: " + data.period
+      : "ไม่ระบุช่วงข้อมูล";
   }
 
   function setChange(elementId, current, previous) {
@@ -72,42 +85,113 @@ import { loadDashboardData } from "./data-service.js";
     return element;
   }
 
+  function renderAccessibleRows(tableBodyId, rows, getValues) {
+    const body = document.getElementById(tableBodyId);
+    body.replaceChildren();
+    rows.forEach(function (item) {
+      const row = makeElement("tr");
+      getValues(item).forEach(function (value, index) {
+        const cell = makeElement(index === 0 ? "th" : "td", "", value);
+        if (index === 0) {
+          cell.setAttribute("scope", "row");
+        }
+        row.appendChild(cell);
+      });
+      body.appendChild(row);
+    });
+  }
+
   function renderCategories(categories, formatNumber) {
-    const container = document.getElementById("categoryChart");
-    container.replaceChildren();
-    const maxValue = Math.max.apply(null, categories.map(function (category) { return category.latestSsq; })) || 1;
-    categories.forEach(function (category, index) {
-      const row = makeElement("div", "category-row");
-      row.setAttribute("aria-label", category.name + ": Latest SSQ " + formatNumber(category.latestSsq));
-      row.appendChild(makeElement("span", "category-name", category.name));
-      const track = makeElement("div", "category-track");
-      const bar = makeElement("div", "category-bar");
-      bar.style.width = (category.latestSsq / maxValue * 100) + "%";
-      bar.style.setProperty("--chart-color", chartColors[index % chartColors.length]);
-      track.appendChild(bar);
-      row.appendChild(track);
-      const value = makeElement("span", "category-value", formatNumber(category.latestSsq));
-      value.appendChild(makeElement("small", "", formatNumber(category.skuCount) + " SKU"));
-      row.appendChild(value);
-      container.appendChild(row);
+    const Chart = getChartLibrary();
+    const categoryChart = document.getElementById("categoryChart");
+    new Chart(categoryChart, {
+      type: "bar",
+      data: {
+        labels: categories.map(function (category) { return category.name; }),
+        datasets: [{
+          label: "Latest SSQ",
+          data: categories.map(function (category) { return category.latestSsq; }),
+          backgroundColor: categories.map(function (_, index) { return chartColors[index % chartColors.length]; }),
+          borderRadius: 5,
+          maxBarThickness: 23
+        }]
+      },
+      options: {
+        indexAxis: "y",
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function (context) {
+                return " " + formatNumber(context.parsed.x) + " · " +
+                  formatNumber(categories[context.dataIndex].skuCount) + " SKU";
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            beginAtZero: true,
+            border: { display: false },
+            grid: { color: "#edf0f5" },
+            ticks: { font: { size: 11 }, callback: function (value) { return formatNumber(value); } }
+          },
+          y: {
+            border: { display: false },
+            grid: { display: false },
+            ticks: {
+              autoSkip: false,
+              font: { size: 12 },
+              callback: function (value) {
+                const label = this.getLabelForValue(value);
+                return label.length > 22 ? label.slice(0, 21) + "…" : label;
+              }
+            }
+          }
+        }
+      }
+    });
+    renderAccessibleRows("categoryDataTableBody", categories, function (category) {
+      return [category.name, formatNumber(category.latestSsq), formatNumber(category.skuCount)];
     });
   }
 
   function renderStatuses(statuses, total, formatNumber) {
-    const donut = document.getElementById("statusDonut");
+    const Chart = getChartLibrary();
     const breakdown = document.getElementById("statusBreakdown");
-    const segments = [];
-    let start = 0;
-    statuses.forEach(function (status, index) {
-      const end = start + status.skuCount / total * 100;
-      segments.push(chartColors[index % chartColors.length] + " " + start + "% " + end + "%");
-      start = end;
+    const statusChart = document.getElementById("statusChart");
+    new Chart(statusChart, {
+      type: "doughnut",
+      data: {
+        labels: statuses.map(function (status) { return status.name; }),
+        datasets: [{
+          data: statuses.map(function (status) { return status.skuCount; }),
+          backgroundColor: statuses.map(function (_, index) { return chartColors[index % chartColors.length]; }),
+          borderColor: "#fff",
+          borderWidth: 3,
+          hoverOffset: 4
+        }]
+      },
+      options: {
+        maintainAspectRatio: false,
+        cutout: "72%",
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function (context) {
+                const count = Number(context.raw) || 0;
+                const percentage = total ? (count / total * 100).toFixed(1) : "0.0";
+                return " " + context.label + ": " + formatNumber(count) + " SKU (" + percentage + "%)";
+              }
+            }
+          }
+        }
+      }
     });
-    donut.style.setProperty("--donut-gradient", "conic-gradient(" + segments.join(", ") + ")");
-    donut.setAttribute("aria-label", statuses.map(function (status) {
-      return status.name + " " + formatNumber(status.skuCount) + " SKU";
-    }).join(", "));
     document.getElementById("statusTotal").textContent = formatNumber(total);
+    document.getElementById("statusDataTableTotal").textContent = formatNumber(total);
     breakdown.replaceChildren();
     statuses.forEach(function (status, index) {
       const row = makeElement("div", "breakdown-row");
@@ -118,23 +202,57 @@ import { loadDashboardData } from "./data-service.js";
       row.appendChild(makeElement("b", "", formatNumber(status.skuCount)));
       breakdown.appendChild(row);
     });
+    renderAccessibleRows("statusDataTableBody", statuses, function (status) {
+      return [status.name, formatNumber(status.skuCount)];
+    });
   }
 
   function renderLaunches(launches, formatNumber) {
-    const chart = document.getElementById("launchChart");
-    chart.replaceChildren();
-    const maxCount = Math.max.apply(null, launches.map(function (launch) { return launch.skuCount; })) || 1;
-    launches.forEach(function (launch, index) {
-      const column = makeElement("div", "launch-column");
-      column.appendChild(makeElement("span", "launch-value", formatNumber(launch.skuCount)));
-      const track = makeElement("div", "launch-track");
-      const bar = makeElement("div", "launch-bar");
-      bar.style.setProperty("--bar-height", (launch.skuCount / maxCount * 100) + "%");
-      bar.style.backgroundColor = chartColors[index % chartColors.length];
-      track.appendChild(bar);
-      column.appendChild(track);
-      column.appendChild(makeElement("span", "launch-label", launch.name));
-      chart.appendChild(column);
+    const Chart = getChartLibrary();
+    const launchChart = document.getElementById("launchChart");
+    new Chart(launchChart, {
+      type: "bar",
+      data: {
+        labels: launches.map(function (launch) { return launch.name; }),
+        datasets: [{
+          label: "จำนวน SKU",
+          data: launches.map(function (launch) { return launch.skuCount; }),
+          backgroundColor: launches.map(function (_, index) { return chartColors[index % chartColors.length]; }),
+          borderRadius: 5,
+          maxBarThickness: 42
+        }]
+      },
+      options: {
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function (context) { return " " + formatNumber(context.parsed.y) + " SKU"; }
+            }
+          }
+        },
+        scales: {
+          x: {
+            border: { display: false },
+            grid: { display: false },
+            ticks: { font: { size: 12 } }
+          },
+          y: {
+            beginAtZero: true,
+            border: { display: false },
+            grid: { color: "#edf0f5" },
+            ticks: {
+              precision: 0,
+              font: { size: 11 },
+              callback: function (value) { return formatNumber(value); }
+            }
+          }
+        }
+      }
+    });
+    renderAccessibleRows("launchDataTableBody", launches, function (launch) {
+      return [launch.name, formatNumber(launch.skuCount)];
     });
   }
 
@@ -171,7 +289,15 @@ import { loadDashboardData } from "./data-service.js";
     showToast("ไม่สามารถยืนยันตัวตน Windows ได้ กรุณาตรวจสอบเครือข่ายหรือสิทธิ์");
   });
 
-  loadDashboardData().then(renderDashboard).catch(function (error) {
+  loadDashboardData().then(function (data) {
+    try {
+      renderDashboard(data);
+    } catch (error) {
+      console.error("Product dashboard rendering failed:", error);
+      document.getElementById("dataSource").textContent = "แสดงข้อมูลแดชบอร์ดไม่สำเร็จ";
+      showToast("ไม่สามารถแสดงแดชบอร์ดได้ กรุณาตรวจสอบข้อผิดพลาด");
+    }
+  }).catch(function (error) {
     console.error("Product dashboard data failed to load:", error);
     document.getElementById("dataSource").textContent = "โหลดข้อมูลสินค้าไม่สำเร็จ";
     showToast("ไม่สามารถโหลดข้อมูลสินค้าได้ กรุณาตรวจสอบไฟล์ต้นทาง");

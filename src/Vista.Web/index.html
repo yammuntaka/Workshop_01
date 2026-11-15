@@ -31,9 +31,9 @@
       <section class="content">
         <div class="page-heading">
           <div>
-            <div class="eyebrow">PRODUCT ANALYTICS</div>
             <h1>ภาพรวมสินค้าและ SKU</h1>
             <p class="subtitle" id="dataSource">กำลังโหลดข้อมูลสินค้า...</p>
+            <p class="source-note">ชุดข้อมูลที่นำเข้าไม่มีฟิลด์วันที่อัปเดต</p>
           </div>
           <span class="source-period" id="dataPeriod">กำลังโหลดข้อมูล</span>
         </div>
@@ -42,7 +42,7 @@
           <article class="card metric">
             <div class="metric-top"><span>SKU ทั้งหมด</span><span class="metric-icon">▦</span></div>
             <div class="metric-value" id="metricSkuCount">—</div>
-            <div class="metric-foot"><span id="metricSkuFoot">รายการสินค้า</span></div>
+            <div class="metric-foot"><span id="metricSkuFoot">หมายเลข Material SAP</span></div>
           </article>
           <article class="card metric">
             <div class="metric-top"><span>Product ID ไม่ซ้ำ</span><span class="metric-icon teal">◉</span></div>
@@ -61,28 +61,60 @@
           </article>
         </div>
 
+        <details class="metric-guide">
+          <summary>วิธีคำนวณตัวเลข</summary>
+          <ul>
+            <li>SKU ทั้งหมดนับรายการสินค้าในชุดข้อมูลที่โหลด; Material SAP นับรหัสที่ไม่ซ้ำ</li>
+            <li>Product ID ไม่ซ้ำนับรหัสที่แตกต่างกัน</li>
+            <li>Latest SDQ เป็นผลรวมของคอลัมน์ Latest SDQ; เปอร์เซ็นต์เปรียบเทียบกับผลรวม Initial SDQ</li>
+            <li>Latest SSQ และ SSQ Estimation เป็นผลรวมของแต่ละคอลัมน์ แสดงแยกกัน</li>
+          </ul>
+          <p>ข้อมูลที่นำเข้าไม่มีคำอธิบายความหมายหรือหน่วยของ SDQ/SSQ; ตัวเลขแสดงผลรวมตามคอลัมน์โดยไม่แปลงหน่วย</p>
+        </details>
+
         <div class="charts">
           <article class="card chart-card">
             <div class="card-heading">
               <div><h2>Latest SSQ ตามหมวดหมู่</h2><p>ยอดรวม Latest SSQ และจำนวน SKU ในแต่ละหมวด</p></div>
             </div>
-            <div class="category-chart" id="categoryChart" aria-label="กราฟ Latest SSQ แยกตามหมวดหมู่">กำลังโหลด...</div>
+            <div class="chart-container category-chart" aria-hidden="true">
+              <canvas id="categoryChart"></canvas>
+            </div>
+            <table class="visually-hidden">
+              <caption>ข้อมูล Latest SSQ และจำนวน SKU แยกตามหมวดหมู่</caption>
+              <thead><tr><th scope="col">หมวดหมู่</th><th scope="col">Latest SSQ</th><th scope="col">จำนวน SKU</th></tr></thead>
+              <tbody id="categoryDataTableBody"><tr><td colspan="3">กำลังโหลดข้อมูล...</td></tr></tbody>
+            </table>
           </article>
           <article class="card chart-card">
             <div class="card-heading"><div><h2>สถานะการพัฒนา</h2><p>สัดส่วน SKU ตาม Development Status</p></div></div>
-            <div class="donut-wrap">
-              <div class="donut" id="statusDonut" role="img" aria-label="กราฟวงกลมแสดงสถานะการพัฒนา">
+            <div class="donut-wrap" aria-hidden="true">
+              <div class="donut" id="statusDonut">
+                <canvas id="statusChart"></canvas>
                 <div class="donut-inner"><strong id="statusTotal">—</strong><small>SKU</small></div>
               </div>
               <div class="breakdown" id="statusBreakdown"></div>
             </div>
+            <table class="visually-hidden">
+              <caption>จำนวน SKU แยกตามสถานะการพัฒนา</caption>
+              <thead><tr><th scope="col">สถานะการพัฒนา</th><th scope="col">จำนวน SKU</th></tr></thead>
+              <tbody id="statusDataTableBody"><tr><td colspan="2">กำลังโหลดข้อมูล...</td></tr></tbody>
+              <tfoot><tr><th scope="row">รวม</th><td id="statusDataTableTotal">—</td></tr></tfoot>
+            </table>
           </article>
         </div>
 
         <div class="bottom-grid">
           <article class="card bar-card">
             <div class="card-heading"><div><h2>SKU ตามช่วง Launch</h2><p>จำนวนสินค้าในแต่ละช่วงเปิดตัว</p></div></div>
-            <div class="launch-chart" id="launchChart" role="img" aria-label="กราฟแท่งจำนวน SKU ตามช่วงเปิดตัว">กำลังโหลด...</div>
+            <div class="chart-container launch-chart" aria-hidden="true">
+              <canvas id="launchChart"></canvas>
+            </div>
+            <table class="visually-hidden">
+              <caption>จำนวน SKU แยกตามช่วง Launch</caption>
+              <thead><tr><th scope="col">ช่วง Launch</th><th scope="col">จำนวน SKU</th></tr></thead>
+              <tbody id="launchDataTableBody"><tr><td colspan="2">กำลังโหลดข้อมูล...</td></tr></tbody>
+            </table>
           </article>
           <article class="card activity">
             <div class="card-heading"><div><h2>Top SKU · Latest SSQ</h2><p>สินค้าที่มีค่า Latest SSQ สูงสุด</p></div></div>
@@ -93,6 +125,7 @@
     </main>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
   </div>
+  <script src="/js/vendor/chart.umd.min.js"></script>
   <script type="module" src="/js/dashboard.js"></script>
 </body>
 </html>

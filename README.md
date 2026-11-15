@@ -5,6 +5,7 @@
 ## โครงสร้าง
 
 - `src/Vista.Web/` — หน้า HTML, CSS และ JavaScript ของแดชบอร์ด
+- `src/Vista.Web/js/vendor/` — Chart.js 4.5.1 และใบอนุญาต MIT; เว็บโหลดไลบรารีจากไฟล์ในเครื่อง
 - `src/Vista.Web/data/products.json` — ข้อมูลสินค้าแบบย่อที่หน้าเว็บอ่าน
 - `src/Vista.DataImport/Program.cs` — อ่านคอลัมน์ที่ใช้จาก Excel แล้วสร้าง JSON
 - `src/Vista.Server/Application/` — use case สำหรับข้อมูลผู้ใช้ Windows
@@ -19,6 +20,8 @@
 - KPI: จำนวน SKU, Product ID ที่ไม่ซ้ำ, Latest SDQ เทียบ Initial SDQ และยอด Latest SSQ/SSQ Estimation
 - กราฟ: Latest SSQ แยกตามหมวด, สัดส่วนสถานะการพัฒนา และจำนวน SKU ตามช่วง Launch
 - รายการ Top SKU จัดอันดับตาม Latest SSQ
+
+กราฟสร้างด้วย Chart.js ส่วนตารางข้อมูลที่ซ่อนด้วย CSS ยังคงให้โปรแกรมอ่านหน้าจอเข้าถึงได้; UI ใช้ Leelawadee UI พร้อม fallback สำหรับ Windows
 
 การอ่านข้อมูลและคำนวณยอดรวมอยู่ใน `src/Vista.Web/js/data-service.js`; ส่วน `dashboard.js` รับผิดชอบแสดงผล
 
