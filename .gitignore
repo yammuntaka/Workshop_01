@@ -1,0 +1,23 @@
+# Build artifacts
+[Bb]in/
+[Oo]bj/
+*.dll
+*.exe
+*.pdb
+
+# Local editor and assistant configuration
+.vs/
+.vscode/
+.agents/
+.claude/
+.codex/
+
+# Temporary files and logs
+*.log
+*.tmp
+*.user
+*.suo
+
+# Operating system files
+.DS_Store
+Thumbs.db
